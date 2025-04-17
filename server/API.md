@@ -12,11 +12,11 @@
   - Returns the average number and rolling average of reviews for a business per year-month as JSON Array.
 
 ## Route 2
-- Route: GET /top_business
+- Route: GET /top_local_business
 - Description: Returns the top 3 rated business per state-city as a JSON Array.
 - Route Parameter(s): None
 - Query Parameter(s): state (string)\* (default: '%'), city (string)\* (default: '%')
-- Route Handler: top_business(req, res)
+- Route Handler: top_local_business(req, res)
 - Return Type: JSON Array
 - Return Parameters: [{ business_id (string), business_name (string), state (string), city (string), stars (int), review_count (int) }]
 - Expected (Output) Behavior:
@@ -67,3 +67,53 @@
 - Expected (Output) Behavior:
   - Case 1: If user_id is not specified, return all users' ordered by their total number of reviews made
   - Case 2: If user_id is specified, return the matching user with their total number of reviews made
+
+## Route 7
+- Route: GET /top_business
+- Description: Returns the top 10 highest-rated open businesses across all cities as a JSON Array.
+- Route Parameter(s): None
+- Query Parameter(s): None
+- Route Handler: top_business(req, res)
+- Return Type: JSON Array
+- Return Parameters: [{ business_id (string), name (string), city (string), avg_rating (float), review_count (int) }]
+- Expected (Output) Behavior:
+  - Returns the top 10 businesses that are currently open, sorted by highest average rating (rounded to two decimal places) and number of reviews in descending order.
+  - Results are aggregated across all cities, not partitioned by location.
+
+## Route 8
+- Route: GET /local_categorized_business
+- Description: Returns a maximum of 20 open businesses in a given city and category, with at least a minimum average rating, as a JSON Array.
+- Route Parameter(s): None
+- Query Parameter(s): category (string)\* (default: '%'), city (string)\* (default: '%'), rating (float)\* (default: 0)
+- Route Handler: local_categorized_business(req, res)
+- Return Type: JSON Array
+- Return Parameters: [{ business_id (string), name (string), address (string), city (string), state (string), categories (string), avg_rating (float), total_reviews (int) }]
+- Expected (Output) Behavior:
+  - Returns up to 20 businesses in the specified city and category whose average rating is greater than or equal to the given threshold.
+  - Results are sorted by descending average rating and then by total number of reviews.
+  - If no query parameters are specified, defaults will return businesses from all cities and categories with any rating.
+
+## Route 9
+- Route: GET /top_users_by_city
+- Description: Returns the top 3 users per qualifying city based on tips and reviews as a JSON Array.
+- Route Parameter(s): None
+- Query Parameter(s): None
+- Route Handler: top_users_by_city(req, res)
+- Return Type: JSON Array
+- Return Parameters: [{ city (string), user_id (string), user_name (string), total_reviews (int), total_tips (int) }]
+- Expected (Output) Behavior:
+  - For each city with at least 50 open businesses and an average review rating greater than 3.5, returns the top 3 users ranked by number of tips, then reviews.
+  - Results are ordered by city and user rank within the city.
+
+## Route 10
+- Route: GET /tipper_stats
+- Description: Returns statistics on users who have reviewed businesses in at least 3 different states, as a JSON Array.
+- Route Parameter(s): None
+- Query Parameter(s): None
+- Route Handler: tipper_stats(req, res)
+- Return Type: JSON Array
+- Return Parameters: [{ user_id (string), user_name (string), states_reviewed (int), total_reviews (int), has_ever_tipped (boolean) }]
+- Expected (Output) Behavior:
+  - Returns users who have written reviews in at least 3 distinct states.
+  - Includes number of states reviewed, total reviews, and whether the user has ever left a tip.
+  - Results are sorted by number of states reviewed (descending), then by total reviews (descending).

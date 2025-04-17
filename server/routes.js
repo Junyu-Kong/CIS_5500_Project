@@ -423,9 +423,6 @@ const top_users_by_city = async function(req, res) {
 
 // GET /tipper_stats
 const tipper_stats = async function(req, res) {
-  const category = req.query.category ?? '%'
-  const city = req.query.city ?? '%'
-  const rating = req.query.rating ?? 0
 
   connection.query(`
     WITH user_state_counts AS (
