@@ -52,8 +52,8 @@ const average_review = async function(req, res) {
   });
 }
 
-// GET /top_business
-const top_business = async function(req, res) {
+// GET /top_local_business
+const top_local_business = async function(req, res) {
   const state = req.query.state ?? '%'
   const city = req.query.city ?? '%'
 
@@ -274,11 +274,217 @@ const user_review_count = async function(req, res) {
   });
 }
 
+// GET /top_business
+const top_business = async function(req, res) {
+
+  connection.query(`
+    WITH business_reviews AS (
+      SELECT 
+        b.business_id, 
+        b.name, 
+        b.city, 
+        AVG(r.stars) AS avg_rating, 
+        COUNT(r.review_id) AS review_count
+      FROM Business b
+      JOIN Review r 
+        ON b.business_id = r.business_id
+      WHERE b.is_open = 1
+      GROUP BY b.business_id, b.name, b.city
+    )
+    SELECT 
+      business_id, 
+      name, 
+      city, 
+      ROUND(avg_rating, 2) AS avg_rating, 
+      review_count
+    FROM business_reviews
+    ORDER BY avg_rating DESC, review_count DESC
+    LIMIT 10;
+  `, (err, data) => {
+    if (err) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data.rows);
+    }
+  });
+}
+
+// GET /local_categorized_business
+const local_categorized_business = async function(req, res) {
+  const category = req.query.category ?? '%'
+  const city = req.query.city ?? '%'
+  const rating = req.query.rating ?? 0
+
+  connection.query(`
+    WITH filtered_businesses AS (
+      SELECT 
+        b.business_id, 
+        b.name, 
+        b.address, 
+        b.city, 
+        b.state, 
+        b.categories,
+        AVG(r.stars) AS avg_rating,
+        COUNT(r.review_id) AS total_reviews
+      FROM Business b
+      LEFT JOIN Review r 
+        ON b.business_id = r.business_id
+      WHERE b.city = '${city}'
+        AND b.categories LIKE '%${category}%'
+      GROUP BY b.business_id, b.name, b.address, b.city, b.state, b.categories
+    )
+    SELECT 
+      business_id, 
+      name, 
+      address, 
+      city, 
+      state, 
+      categories,
+      ROUND(avg_rating, 2) AS avg_rating, 
+      total_reviews
+    FROM filtered_businesses
+    WHERE avg_rating >= ${rating}
+    ORDER BY avg_rating DESC, total_reviews DESC
+    LIMIT 20;
+  `, (err, data) => {
+    if (err) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data.rows);
+    }
+  });
+}
+
+// GET /top_users_by_city
+const top_users_by_city = async function(req, res) {
+
+  connection.query(`
+    WITH city_stats AS (
+      -- Qualifying cities
+      SELECT
+        b.city,
+        COUNT(DISTINCT b.business_id)    AS open_businesses,
+        AVG(r.stars)                     AS city_avg_rating
+      FROM Business b
+      JOIN Review r ON b.business_id = r.business_id
+      WHERE b.is_open = 1
+      GROUP BY b.city
+      HAVING
+        COUNT(DISTINCT b.business_id) >= 50
+        AND AVG(r.stars) > 3.5
+    ),
+    user_metrics AS (
+      -- Per user+city: total reviews and total tips
+      SELECT
+        u.user_id,
+        u.name      AS user_name,
+        b.city,
+        COUNT(r.review_id)    AS total_reviews,
+        COUNT(t.tip_date)     AS total_tips
+      FROM Users u
+      JOIN Review r ON u.user_id = r.user_id
+      JOIN Business b ON r.business_id = b.business_id
+      LEFT JOIN Tip t
+        ON u.user_id = t.user_id
+      AND b.business_id = t.business_id
+      GROUP BY u.user_id, u.name, b.city
+    )
+    SELECT
+      um.city,
+      um.user_id,
+      um.user_name,
+      um.total_reviews,
+      um.total_tips
+    FROM (
+      -- Rank users within each city
+      SELECT
+        um.*,
+        ROW_NUMBER() OVER (
+          PARTITION BY um.city
+          ORDER BY um.total_tips DESC,
+                  um.total_reviews DESC
+        ) AS rn
+      FROM user_metrics um
+      JOIN city_stats cs ON um.city = cs.city
+    ) um
+    WHERE um.rn <= 3
+    ORDER BY um.city, um.rn;
+  `, (err, data) => {
+    if (err) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data.rows);
+    }
+  });
+}
+
+// GET /tipper_stats
+const tipper_stats = async function(req, res) {
+  const category = req.query.category ?? '%'
+  const city = req.query.city ?? '%'
+  const rating = req.query.rating ?? 0
+
+  connection.query(`
+    WITH user_state_counts AS (
+      -- Count how many distinct states each user has reviewed in
+      SELECT
+        u.user_id,
+        u.name,
+        COUNT(DISTINCT b.state) AS states_reviewed
+      FROM Users u
+      JOIN Review r    ON u.user_id = r.user_id
+      JOIN Business b  ON r.business_id = b.business_id
+      GROUP BY u.user_id, u.name
+    ),
+    user_review_totals AS (
+      -- Total reviews per user
+      SELECT
+        user_id,
+        COUNT(*) AS total_reviews
+      FROM Review
+      GROUP BY user_id
+    ),
+    user_tip_flags AS (
+      -- Whether the user has ever tipped
+      SELECT
+        user_id,
+        TRUE AS has_tipped
+      FROM Tip
+      GROUP BY user_id
+    )
+    SELECT
+      usc.user_id,
+      usc.name          AS user_name,
+      usc.states_reviewed,
+      urt.total_reviews,
+      COALESCE(utf.has_tipped, FALSE) AS has_ever_tipped
+    FROM user_state_counts usc
+    JOIN user_review_totals urt USING (user_id)
+    LEFT JOIN user_tip_flags utf USING (user_id)
+    WHERE usc.states_reviewed >= 3
+    ORDER BY usc.states_reviewed DESC, urt.total_reviews DESC;
+  `, (err, data) => {
+    if (err) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data.rows);
+    }
+  });
+}
+
 module.exports = {
   average_review,
-  top_business,
+  top_local_business,
   checkin_performance,
   review_trend,
   engagement_level,
-  user_review_count
+  user_review_count,
+  top_business,
+  local_categorized_business,
+  top_users_by_city,
+  tipper_stats
 }
