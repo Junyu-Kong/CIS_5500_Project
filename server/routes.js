@@ -55,7 +55,7 @@ const average_review = async function(req, res) {
 // GET /top_business
 const top_business = async function(req, res) {
   const state = req.query.state ?? '%'
-  const city = req.query.year_high ?? '%'
+  const city = req.query.city ?? '%'
 
   connection.query(`
     WITH bus_rev AS (
@@ -122,7 +122,6 @@ const checkin_performance = async function(req, res) {
     )
     SELECT c.business_id,
            c.business_name,
-           c.city,
            c.total_checkins,
            CASE
               WHEN c.total_checkins > a.checkin THEN 'Above Average'
@@ -138,7 +137,7 @@ const checkin_performance = async function(req, res) {
       console.log(err);
       res.json({});
     } else {
-      res.json(data.rows);
+      res.json(data.rows[0]);
     }
   });
 }
@@ -229,7 +228,6 @@ const engagement_level = async function(req, res) {
     )
     SELECT e.business_id,
           e.business_name AS name,
-          e.city,
           e.tip_count,
           e.checkin_count,
           ROUND(e.tip_checkin_ratio, 3) AS tip_checkin_ratio,
