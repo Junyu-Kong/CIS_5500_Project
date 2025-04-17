@@ -100,9 +100,8 @@ const top_business = async function(req, res) {
   });
 }
 
-// GET /checkin_performance
+// GET /checkin_performance/:business_id
 const checkin_performance = async function(req, res) {
-  const business_id = req.query.business_id ?? '%'
 
   connection.query(`
     WITH check_in AS (
@@ -132,8 +131,141 @@ const checkin_performance = async function(req, res) {
     FROM check_in c
     JOIN average a
       ON c.city = a.city
-    WHERE business_id = '${business_id}'
+    WHERE business_id = '${req.params.business_id}'
     ORDER BY checkin_performance, total_checkins DESC;
+  `, (err, data) => {
+    if (err) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data.rows);
+    }
+  });
+}
+
+// GET /review_trend/:business_id
+const review_trend = async function(req, res) {
+
+  connection.query(`
+    WITH rev AS (
+      SELECT COUNT(*) AS review_count,
+              t.business_id,
+              TO_CHAR(t.tip_date, 'YYYY') AS year,
+              b.name AS business_name
+      FROM tip t
+      JOIN business b
+          ON t.business_id = b.business_id
+      WHERE business_id = '${req.params.business_id}'
+      GROUP BY t.business_id, year, b.name
+    ),
+    tmp AS (
+      SELECT business_id,
+              business_name,
+              year,
+              review_count,
+              review_count - LAG(
+                review_count, 1, review_count
+              ) OVER (
+                PARTITION BY business_id
+                ORDER BY year
+              ) AS trend
+      FROM rev
+    )
+    SELECT business_id,
+          business_name,
+          year,
+          review_count,
+          CASE
+            WHEN trend > 0 THEN 'Increasing'
+            WHEN trend < 0 THEN 'Decreasing'
+            ELSE 'Stable'
+          END AS review_trend
+    FROM tmp
+    ORDER BY business_name, year;
+  `, (err, data) => {
+    if (err) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data.rows);
+    }
+  });
+}
+
+// GET /engagement_level/:business_id
+const engagement_level = async function(req, res) {
+
+  connection.query(`
+    WITH tips AS (
+      SELECT COUNT(*) AS tip_count, business_id
+      FROM tip
+      GROUP BY business_id
+    ),
+    checkins AS (
+      SELECT COUNT(*) AS checkin_count, business_id
+      FROM checkin
+      GROUP BY business_id
+    ),
+    engagement AS (
+      SELECT b.business_id,
+              b.name AS business_name,
+              b.city,
+              t.tip_count,
+              c.checkin_count,
+              CASE
+                  WHEN COALESCE(c.checkin_count, 0) = 0 THEN 0
+                  ELSE t.tip_count / c.checkin_count
+              END AS tip_checkin_ratio
+      FROM tips t
+      RIGHT JOIN Business b
+          ON t.business_id = b.business_id
+      LEFT JOIN checkins c
+          ON b.business_id = c.business_id
+    ),
+    city_avg AS (
+      SELECT AVG(tip_checkin_ratio) AS city_avg_ratio, city
+      FROM engagement
+      GROUP BY city
+    )
+    SELECT e.business_id,
+          e.business_name AS name,
+          e.city,
+          e.tip_count,
+          e.checkin_count,
+          ROUND(e.tip_checkin_ratio, 3) AS tip_checkin_ratio,
+          ROUND(a.city_avg_ratio, 3) AS city_avg_ratio,
+          CASE
+            WHEN tip_checkin_ratio >= a.city_avg_ratio * 1.1 THEN 'High Engagement'
+            WHEN tip_checkin_ratio <= a.city_avg_ratio * 0.9 THEN 'Low Engagement'
+            ELSE 'Average Engagement'
+          END AS engagement_label
+    FROM engagement e
+    JOIN city_avg a
+      ON e.city = a.city
+    WHERE business_id = '${req.params.business_id}'
+    ORDER BY e.tip_checkin_ratio DESC;
+  `, (err, data) => {
+    if (err) {
+      console.log(err);
+      res.json({});
+    } else {
+      res.json(data.rows);
+    }
+  });
+}
+
+// GET /user_review_count
+const user_review_count = async function(req, res) {
+  const userId = req.query.user_id ?? '%'
+
+  connection.query(`
+    SELECT u.user_id, u.name AS user_name, COUNT(r.review_id) AS total_reviews
+    FROM users u
+    Left JOIN Review r
+    ON u.user_id = r.user_id
+    WHERE u.user_id LIKE '${userId}'
+    GROUP BY u.user_id, name
+    ORDER BY total_reviews DESC, name;
   `, (err, data) => {
     if (err) {
       console.log(err);
@@ -147,5 +279,8 @@ const checkin_performance = async function(req, res) {
 module.exports = {
   average_review,
   top_business,
-  checkin_performance
+  checkin_performance,
+  review_trend,
+  engagement_level,
+  user_review_count
 }

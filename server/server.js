@@ -13,6 +13,9 @@ app.use(cors({
 app.get('/average_review/:business_id', routes.average_review)
 app.get('/top_business', routes.top_business)
 app.get('/checkin_performance', routes.checkin_performance)
+app.get('/review_trend', routes.review_trend)
+app.get('/engagement_level', routes.engagement_level)
+app.get('/user_review_count', routes.user_review_count)
 
 app.listen(config.server_port, () => {
   console.log(`Server running at http://${config.server_host}:${config.server_port}/`)
