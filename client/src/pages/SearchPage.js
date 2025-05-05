@@ -25,12 +25,7 @@ export default function SearchPage() {
   const columns = [
     {
       field: 'name',
-      headerName: 'Business Name',
-      renderCell: (row) => (
-        <NavLink to={`/business/${row.business_id}`}>
-          {row.name}
-        </NavLink>
-      ),
+      headerName: 'Business Name'
     },
     { field: 'address',      headerName: 'Address' },
     { field: 'city',         headerName: 'City' },

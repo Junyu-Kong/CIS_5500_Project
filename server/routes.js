@@ -277,7 +277,14 @@ const user_review_count = async function(req, res) {
 
 // GET /top_business
 const top_business = async function(req, res) {
-
+  const page = req.query.page;
+  if (!page) {
+    page = 1;
+  }
+  
+  const pageSize = req.query.page_size === undefined ? 10 : req.query.page_size;
+  const start = pageSize * (page - 1);
+  
   connection.query(`
     WITH business_reviews AS (
       SELECT 
@@ -300,7 +307,7 @@ const top_business = async function(req, res) {
       review_count
     FROM business_reviews
     ORDER BY avg_rating DESC, review_count DESC
-    LIMIT 10;
+    LIMIT ${pageSize} OFFSET ${start};
   `, (err, data) => {
     if (err) {
       console.log(err);
@@ -313,9 +320,9 @@ const top_business = async function(req, res) {
 
 // GET /local_categorized_business
 const local_categorized_business = async function(req, res) {
-  const category = req.query.category ?? '%'
-  const city = req.query.city ?? '%'
-  const rating = req.query.rating ?? 0
+  const city     = req.query.city     || '';
+  const category = req.query.category || '';
+  const rating   = parseFloat(req.query.rating) || 0;
 
   connection.query(`
     WITH filtered_businesses AS (
@@ -346,8 +353,7 @@ const local_categorized_business = async function(req, res) {
       total_reviews
     FROM filtered_businesses
     WHERE avg_rating >= ${rating}
-    ORDER BY avg_rating DESC, total_reviews DESC
-    LIMIT 20;
+    ORDER BY avg_rating DESC, total_reviews DESC;
   `, (err, data) => {
     if (err) {
       console.log(err);
