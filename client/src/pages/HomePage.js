@@ -19,17 +19,11 @@ export default function HomePage() {
 
   const columns = [
     {
-      field: 'business_name',
-      headerName: 'Business Name',
-      // link into the detail page for this business
-      renderCell: (row) => (
-        <NavLink to={`/business/${row.business_id}`}>
-          {row.business_name}
-        </NavLink>
-      )
+      field: 'name',
+      headerName: 'Business Name'
     },
     { field: 'city',       headerName: 'City' },
-    { field: 'stars',      headerName: 'Avg Rating' },
+    { field: 'avg_rating',      headerName: 'Avg Rating' },
     { field: 'review_count', headerName: 'Reviews' },
   ];
 

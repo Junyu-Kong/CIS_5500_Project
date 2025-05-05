@@ -8,6 +8,11 @@ app.use(cors({
   origin: '*',
 }));
 
+app.get('/author/name', (req, res) => {
+  // simple hard-coded author
+  res.json({ data: 'Demo Author' });
+});
+
 // We use express to define our various API endpoints and
 // provide their handlers that we implemented in routes.js
 app.get('/average_review/:business_id', routes.average_review)

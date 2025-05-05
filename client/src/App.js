@@ -33,8 +33,10 @@ export default function App() {
           <Route path="/search" element={<SearchPage />} />
 
           {/* Authentication */}
+          {/*
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          */}
 
           {/* fallback: could add a 404 page */}
         </Routes>

@@ -1,4 +1,5 @@
 const { Pool, types } = require('pg');
+const jwt    = require('jsonwebtoken');
 const config = require('./config.json')
 
 // Override the default parsing for BIGINT (PostgreSQL type ID 20)
@@ -473,6 +474,65 @@ const tipper_stats = async function(req, res) {
   });
 }
 
+// POST /register
+const register = async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ message: 'Username and password required' });
+  }
+
+  try {
+    // insert into users(username, password) directly
+    await connection.query(
+      `INSERT INTO users (username, password) VALUES ($1, $2)`,
+      [username, password]
+    );
+    return res.status(201).json({ message: 'User registered' });
+  } catch (err) {
+    if (err.code === '23505') {
+      // unique_violation
+      return res.status(409).json({ message: 'Username already taken' });
+    }
+    console.error(err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// POST /login
+const login = async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ message: 'Username and password required' });
+  }
+
+  try {
+    // look up the user’s stored password
+    const result = await connection.query(
+      `SELECT user_id, password FROM users WHERE username = $1`,
+      [username]
+    );
+    if (result.rows.length === 0) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    const { user_id, password: stored } = result.rows[0];
+    if (password !== stored) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+
+    // Sign and return a JWT (optional—you can return whatever you like)
+    const token = jwt.sign(
+      { user_id, username },
+      config.jwt_secret,
+      { expiresIn: '1h' }
+    );
+    return res.json({ token });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 module.exports = {
   average_review,
   top_local_business,
@@ -483,5 +543,7 @@ module.exports = {
   top_business,
   local_categorized_business,
   top_users_by_city,
-  tipper_stats
+  tipper_stats,
+  register,
+  login
 }
