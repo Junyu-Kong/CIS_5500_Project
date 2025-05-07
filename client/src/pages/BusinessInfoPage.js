@@ -12,17 +12,23 @@ import {
   TableBody,
   TableRow,
   TableCell,
+  TextField,
 } from '@mui/material';
 const config = require('../config.json');
 
 export default function BusinessInfoPage() {
   const { businessId } = useParams();
   const [business, setBusiness] = useState(null);
+
+  // year bounds for average_review
+  const [yearLow, setYearLow]   = useState('2014');
+  const [yearHigh, setYearHigh] = useState('2016');
+
   const [metrics, setMetrics] = useState({
-    averageReview: null,
-    checkinPerformance: null,
-    reviewTrend: null,
-    engagementLevel: null,
+    averageReview:       null,
+    checkinPerformance:  null,
+    reviewTrend:         null,
+    engagementLevel:     null,
   });
 
   // Fetch business details
@@ -33,30 +39,36 @@ export default function BusinessInfoPage() {
       .catch(console.error);
   }, [businessId]);
 
-  // Fetch metrics
+  // Fetch metrics including averageReview with dynamic year bounds
   useEffect(() => {
     const endpoints = {
-      averageReview: `/average_review/${businessId}`,
+      averageReview:      `/average_review/${businessId}?year_low=${yearLow}&year_high=${yearHigh}`,
       checkinPerformance: `/checkin_performance/${businessId}`,
-      reviewTrend: `/review_trend/${businessId}`,
-      engagementLevel: `/engagement_level/${businessId}`,
+      reviewTrend:        `/review_trend/${businessId}`,
+      engagementLevel:    `/engagement_level/${businessId}`,
     };
 
     Object.entries(endpoints).forEach(([key, path]) => {
       fetch(`http://${config.server_host}:${config.server_port}${path}`)
         .then(res => res.json())
-        .then(data => setMetrics(prev => ({ ...prev, [key]: data })))
+        .then(data => {
+          setMetrics(prev => ({ ...prev, [key]: data }));
+        })
         .catch(console.error);
     });
-  }, [businessId]);
+  }, [businessId, yearLow, yearHigh]);
 
   if (!business) {
-    return <Container sx={{ mt: 4 }}><Typography>Loading business info...</Typography></Container>;
+    return (
+      <Container sx={{ mt: 4 }}>
+        <Typography>Loading business info...</Typography>
+      </Container>
+    );
   }
 
-  // Construct full address for map
+  // full address for map
   const fullAddress = `${business.address}, ${business.city}, ${business.state} ${business.postal_code}`;
-  const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(fullAddress)}&output=embed`;
+  const mapSrc      = `https://www.google.com/maps?q=${encodeURIComponent(fullAddress)}&output=embed`;
 
   return (
     <Container sx={{ mt: 4 }}>
@@ -91,7 +103,7 @@ export default function BusinessInfoPage() {
                   <TableCell>{business.categories}</TableCell>
                 </TableRow>
                 <TableRow>
-                <TableCell>Hours</TableCell>
+                  <TableCell>Hours</TableCell>
                   <TableCell>
                     <Table size="small" sx={{ border: 'none' }}>
                       <TableBody>
@@ -108,7 +120,7 @@ export default function BusinessInfoPage() {
                       </TableBody>
                     </Table>
                   </TableCell>
-              </TableRow>
+                </TableRow>
               </TableBody>
             </Table>
           </Paper>
@@ -138,22 +150,49 @@ export default function BusinessInfoPage() {
             <Typography variant="h6" gutterBottom>
               Performance Metrics
             </Typography>
+
+            {/* Year bounds selectors */}
+            <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+              <TextField
+                label="Year Low"
+                type="number"
+                value={yearLow}
+                onChange={e => setYearLow(e.target.value)}
+                sx={{ width: 120 }}
+              />
+              <TextField
+                label="Year High"
+                type="number"
+                value={yearHigh}
+                onChange={e => setYearHigh(e.target.value)}
+                sx={{ width: 120 }}
+              />
+            </Box>
+
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6} md={3}>
-                <Typography variant="subtitle1">Average Review</Typography>
-                <Typography>{metrics.averageReview?.value ?? '...'}</Typography>
+                <Typography variant="subtitle1">Avg Reviews (3-mo rolling)</Typography>
+                <Typography>
+                  {metrics.averageReview?.[metrics.averageReview.length - 1]?.rolling_avg_reviews ?? '...'}
+                </Typography>
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
                 <Typography variant="subtitle1">Checkin Performance</Typography>
-                <Typography>{metrics.checkinPerformance?.value ?? '...'}</Typography>
+                <Typography>
+                  {metrics.checkinPerformance?.checkin_performance ?? '...'}
+                </Typography>
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
                 <Typography variant="subtitle1">Review Trend</Typography>
-                <Typography>{metrics.reviewTrend?.value ?? '...'}</Typography>
+                <Typography>
+                  {metrics.reviewTrend?.[metrics.reviewTrend.length - 1]?.review_trend ?? '...'}
+                </Typography>
               </Grid>
               <Grid item xs={12} sm={6} md={3}>
                 <Typography variant="subtitle1">Engagement Level</Typography>
-                <Typography>{metrics.engagementLevel?.value ?? '...'}</Typography>
+                <Typography>
+                  {metrics.engagementLevel?.[0]?.engagement_label ?? '...'}
+                </Typography>
               </Grid>
             </Grid>
           </Paper>

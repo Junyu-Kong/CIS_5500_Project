@@ -232,7 +232,7 @@ const engagement_level = async function(req, res) {
       GROUP BY business_id
     ),
     checkins AS (
-      SELECT COUNT(*)     AS checkin_count,
+      SELECT COUNT(*)       AS checkin_count,
              business_id
       FROM checkin
       GROUP BY business_id
@@ -256,18 +256,18 @@ const engagement_level = async function(req, res) {
     ),
     city_avg AS (
       SELECT
-        AVG(e.tip_checkin_ratio) AS city_avg_ratio,
+        AVG(e.tip_checkin_ratio)   AS city_avg_ratio,
         e.city
       FROM engagement e
       GROUP BY e.city
     )
     SELECT
       e.business_id,
-      e.business_name   AS name,
+      e.business_name    AS name,
       e.tip_count,
       e.checkin_count,
-      ROUND(e.tip_checkin_ratio, 3) AS tip_checkin_ratio,
-      ROUND(city_avg.city_avg_ratio, 3) AS city_avg_ratio,
+      ROUND(e.tip_checkin_ratio::numeric, 3) AS tip_checkin_ratio,
+      ROUND(city_avg.city_avg_ratio::numeric, 3) AS city_avg_ratio,
       CASE
         WHEN e.tip_checkin_ratio >= city_avg.city_avg_ratio * 1.1 THEN 'High Engagement'
         WHEN e.tip_checkin_ratio <= city_avg.city_avg_ratio * 0.9 THEN 'Low Engagement'
@@ -280,7 +280,7 @@ const engagement_level = async function(req, res) {
     ORDER BY e.tip_checkin_ratio DESC;
   `, (err, data) => {
     if (err) {
-      console.error(err);
+      console.error('engagement_level error:', err);
       return res.json({});
     }
     res.json(data.rows);
@@ -357,6 +357,13 @@ const local_categorized_business = async function(req, res) {
   const city     = req.query.city     || '';
   const category = req.query.category || '';
   const rating   = parseFloat(req.query.rating) || 0;
+  page = req.query.page;
+  if (!page) {
+    page = 1;
+  }
+  
+  const pageSize = req.query.page_size === undefined ? 10 : req.query.page_size;
+  const start = pageSize * (page - 1);
 
   connection.query(`
     WITH filtered_businesses AS (
@@ -387,7 +394,8 @@ const local_categorized_business = async function(req, res) {
       total_reviews
     FROM filtered_businesses
     WHERE avg_rating >= ${rating}
-    ORDER BY avg_rating DESC, total_reviews DESC;
+    ORDER BY avg_rating DESC, total_reviews DESC
+    LIMIT ${pageSize} OFFSET ${start};
   `, (err, data) => {
     if (err) {
       console.log(err);
