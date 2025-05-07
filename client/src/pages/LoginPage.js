@@ -1,7 +1,13 @@
 // src/pages/LoginPage.js
 import { useState } from 'react';
-import { Container, TextField, Button, Box, Typography } from '@mui/material';
-import { useNavigate, NavLink } from 'react-router-dom';
+import {
+  Container,
+  TextField,
+  Button,
+  Box,
+  Typography,
+} from '@mui/material';
+import { NavLink, useNavigate } from 'react-router-dom';
 const config = require('../config.json');
 
 export default function LoginPage() {
@@ -23,11 +29,11 @@ export default function LoginPage() {
           body: JSON.stringify({ username, password }),
         }
       );
-
       const data = await res.json();
+
       if (res.ok && data.token) {
-        // save JWT (or whatever token) and redirect
         localStorage.setItem('token', data.token);
+        localStorage.setItem('username', username);
         navigate('/');
       } else {
         setError(data.message || 'Login failed');
@@ -39,7 +45,7 @@ export default function LoginPage() {
   };
 
   return (
-    <Container sx={{ mt: 4, maxWidth: 'sm' }}>
+    <Container sx={{ mt: 4, maxWidth: 'xs' }}>
       <Typography variant="h4" gutterBottom>
         Login
       </Typography>
@@ -54,14 +60,14 @@ export default function LoginPage() {
         <TextField
           label="Username"
           value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={e => setUsername(e.target.value)}
           required
         />
         <TextField
           label="Password"
           type="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={e => setPassword(e.target.value)}
           required
         />
         <Button type="submit" variant="contained">
@@ -71,7 +77,9 @@ export default function LoginPage() {
 
       <Typography sx={{ mt: 2 }}>
         Don't have an account?{' '}
-        <NavLink to="/register">Register here</NavLink>
+        <NavLink to="/register" style={{ textDecoration: 'none', fontWeight: 500 }}>
+          Register here
+        </NavLink>
       </Typography>
     </Container>
   );

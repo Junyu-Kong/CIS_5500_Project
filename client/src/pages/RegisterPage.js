@@ -1,14 +1,20 @@
 // src/pages/RegisterPage.js
 import { useState } from 'react';
-import { Container, TextField, Button, Box, Typography } from '@mui/material';
-import { useNavigate, NavLink } from 'react-router-dom';
+import {
+  Container,
+  TextField,
+  Button,
+  Box,
+  Typography
+} from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 const config = require('../config.json');
 
 export default function RegisterPage() {
-  const [username, setUsername]         = useState('');
-  const [password, setPassword]         = useState('');
-  const [confirmPassword, setConfirm]   = useState('');
-  const [error, setError]               = useState('');
+  const [username, setUsername]       = useState('');
+  const [password, setPassword]       = useState('');
+  const [confirmPassword, setConfirm] = useState('');
+  const [error, setError]             = useState('');
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -29,10 +35,9 @@ export default function RegisterPage() {
           body: JSON.stringify({ username, password }),
         }
       );
-
       const data = await res.json();
-      if (res.ok) {
-        // on success, redirect to login
+
+      if (res.status === 201) {
         navigate('/login');
       } else {
         setError(data.message || 'Registration failed');
@@ -44,47 +49,40 @@ export default function RegisterPage() {
   };
 
   return (
-    <Container sx={{ mt: 4, maxWidth: 'sm' }}>
+    <Container sx={{ mt: 4, maxWidth: 'xs' }}>
       <Typography variant="h4" gutterBottom>
         Register
       </Typography>
-
       {error && (
         <Typography color="error" sx={{ mb: 2 }}>
           {error}
         </Typography>
       )}
-
       <Box component="form" onSubmit={handleSubmit} sx={{ display: 'grid', gap: 2 }}>
         <TextField
           label="Username"
           value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={e => setUsername(e.target.value)}
           required
         />
         <TextField
           label="Password"
           type="password"
           value={password}
-          onChange={(e) => setPassword(e.target.value)}
+          onChange={e => setPassword(e.target.value)}
           required
         />
         <TextField
           label="Confirm Password"
           type="password"
           value={confirmPassword}
-          onChange={(e) => setConfirm(e.target.value)}
+          onChange={e => setConfirm(e.target.value)}
           required
         />
         <Button type="submit" variant="contained">
           Sign Up
         </Button>
       </Box>
-
-      <Typography sx={{ mt: 2 }}>
-        Already have an account?{' '}
-        <NavLink to="/login">Log in here</NavLink>
-      </Typography>
     </Container>
   );
 }

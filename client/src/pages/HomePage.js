@@ -6,14 +6,11 @@ import LazyTable from '../components/LazyTable';
 const config = require('../config.json');
 
 export default function HomePage() {
-  const [author, setAuthor] = useState('');
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    // fetch the app author’s name
-    fetch(`http://${config.server_host}:${config.server_port}/author/name`)
-      .then(res => res.json())
-      .then(data => setAuthor(data.data))
-      .catch(console.error);
+    const user = localStorage.getItem('username');
+    setCurrentUser(user);
   }, []);
 
   const columns = [
@@ -26,11 +23,13 @@ export default function HomePage() {
   return (
     <Container sx={{ mt: 4 }}>
       <Typography variant="h4" gutterBottom>
-        Welcome to YelpClone
+        Welcome to PENN Yelp
       </Typography>
 
       <Typography variant="body1" gutterBottom>
-        App Author: <strong>{author || '...'}</strong>
+        {currentUser
+          ? <>Current User: <strong>{currentUser}</strong></>
+          : <>Not logged in</>}
       </Typography>
 
       <Divider sx={{ my: 3 }} />
