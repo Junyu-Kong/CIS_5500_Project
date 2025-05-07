@@ -32,7 +32,12 @@ export default function TopLocalBusinessesPage() {
   const columns = [
     {
       field: 'business_name',
-      headerName: 'Business Name'
+      headerName: 'Business Name',
+      renderCell: (row) => (
+        <NavLink to={`/business/${row.business_id}`}>
+          {row.business_name}
+        </NavLink>
+      )
     },
     { field: 'state',        headerName: 'State' },
     { field: 'city',         headerName: 'City' },
