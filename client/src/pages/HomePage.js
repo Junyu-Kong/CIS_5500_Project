@@ -15,6 +15,7 @@ import {
   InputAdornment,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import Rating from '@mui/material/Rating';
 import LazyTable from '../components/LazyTable';
 const config = require('../config.json');
 
@@ -23,6 +24,7 @@ export default function HomePage() {
   const [businesses, setBusinesses] = useState([]);
   const [top3, setTop3] = useState([]);
   const [query, setQuery] = useState('');
+  const defaultImages = ['/wine.png', '/icecream.png', '/balloons.png'];
 
   useEffect(() => {
     const user = localStorage.getItem('username');
@@ -85,44 +87,33 @@ export default function HomePage() {
 
         <Divider sx={{ my: 3 }} />
 
-        {/* Search Bar */}
-        <Box sx={{ mb: 4, display: 'flex', justifyContent: 'center' }}>
-          <TextField
-            variant="outlined"
-            placeholder="Search for businesses..."
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            sx={{ width: '50%' }}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-          />
-        </Box>
-
         {/* Top 3 Businesses Grid */}
         <Typography variant="h5" gutterBottom>
           Top Businesses
         </Typography>
         <Grid container spacing={3} sx={{ mb: 4 }}>
-          {top3.map(b => (
+          {top3.map((b, idx) => (
             <Grid item xs={12} sm={4} key={b.business_id}>
               <Card elevation={3}>
                 <CardActionArea component={NavLink} to={`/business/${b.business_id}`}>
                   <CardMedia
                     component="img"
                     height="140"
-                    image={b.image_url || '/placeholder.jpg'}
+                    image={b.image_url || defaultImages[idx]}
                     alt={b.name}
                   />
                   <CardContent>
                     <Typography variant="h6">{b.name}</Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {b.city}, {b.state}
+                      {b.city}
                     </Typography>
+                    <Rating
+                      value={parseFloat(b.avg_rating) || 0}
+                      precision={.1}
+                      readOnly
+                      size="small"
+                      sx={{mt: 1}}
+                    />
                   </CardContent>
                 </CardActionArea>
               </Card>
