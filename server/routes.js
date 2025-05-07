@@ -109,7 +109,8 @@ const top_local_business = async function(req, res) {
           rev_count AS review_count
     FROM ranking
     WHERE row <= 3
-    ORDER BY state, city, stars DESC, review_count DESC;
+    ORDER BY state, city, stars DESC, review_count DESC
+    LIMIT ${pageSize} OFFSET ${start};
   `, (err, data) => {
     if (err) {
       console.log(err);
@@ -584,6 +585,26 @@ const login = async (req, res) => {
   }
 };
 
+// POST /change_password
+const change_password = async (req, res) => {
+  const { user_id, new_password } = req.body;
+  if (!user_id || !new_password) {
+    return res.status(400).json({ message: 'user_id and new_password required' });
+  }
+  try {
+    await connection.query(
+      `UPDATE login
+         SET password = $1
+       WHERE user_id = $2`,
+      [new_password, user_id]
+    );
+    return res.json({ message: 'Password updated' });
+  } catch (err) {
+    console.error('change_password error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 module.exports = {
   average_review,
   top_local_business,
@@ -596,5 +617,6 @@ module.exports = {
   top_users_by_city,
   tipper_stats,
   register,
-  login
+  login,
+  change_password
 }

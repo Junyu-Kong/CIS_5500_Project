@@ -13,6 +13,7 @@ import RegisterPage from "./pages/RegisterPage";
 import TopLocalBusinessesPage from "./pages/TopLocalBusinessesPage";
 import TopUsersByCityPage from './pages/TopUsersByCityPage';
 import TipperStatsPage    from './pages/TipperStatsPage';
+import UserProfile from "./pages/UserProfile";
 
 // custom MUI theme
 export const theme = createTheme({
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/leaderboard/local" element={<TopLocalBusinessesPage />} />
           <Route path="/leaderboard/users" element={<TopUsersByCityPage />} />
           <Route path="/leaderboard/tippers" element={<TipperStatsPage />} />
+          <Route path="/profile" element={<UserProfile />} />
 
           {/* Authentication */}
           <Route path="/login" element={<LoginPage />} />

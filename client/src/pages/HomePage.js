@@ -23,7 +23,7 @@ export default function HomePage() {
   return (
     <Container sx={{ mt: 4 }}>
       <Typography variant="h4" gutterBottom>
-        Welcome to YelpClone
+        Welcome to PENN Yelp
       </Typography>
 
       <Typography variant="body1" gutterBottom>
