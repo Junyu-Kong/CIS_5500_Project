@@ -311,7 +311,7 @@ const user_review_count = async function(req, res) {
 
 // GET /top_business
 const top_business = async function(req, res) {
-  const page = req.query.page;
+  page = req.query.page;
   if (!page) {
     page = 1;
   }
