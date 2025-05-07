@@ -30,6 +30,7 @@ app.get('/business/:business_id', routes.getBusiness);
 app.post('/register', routes.register);
 app.post('/login',    routes.login);
 app.post('/change_password', routes.change_password);
+app.post('/review', routes.add_review);
 
 app.listen(config.server_port, () => {
   console.log(`Server running at http://${config.server_host}:${config.server_port}/`);

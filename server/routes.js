@@ -21,7 +21,7 @@ const connection = new Pool({
 connection.connect((err) => err && console.log(err));
 
 /** Generate a URL-safe, 128-bit ID (22 chars) */
-function generateUserId() {
+function generateId() {
   return crypto
     .randomBytes(16)
     .toString('base64')
@@ -29,6 +29,8 @@ function generateUserId() {
     .replace(/\//g, '_')
     .replace(/=+$/, '');
 }
+
+
 
 // GET /average_review/:business_id
 const average_review = async function(req, res) {
@@ -547,7 +549,7 @@ const register = async (req, res) => {
     let userId;
     let exists;
     do {
-      userId = generateUserId();
+      userId = generateId();
       const chk = await connection.query(
         'SELECT 1 FROM users WHERE user_id = $1',
         [userId]
@@ -660,6 +662,29 @@ const getBusiness = (req, res) => {
   );
 };
 
+
+// POST /review
+const add_review = async function(req, res) {
+  const { user_id, business_id, stars, review_text } = req.body;
+  if (!user_id || !business_id || !stars || !review_text) {
+    return res.status(400).json({ message: 'Missing fields' });
+  }
+  const review_id = generateId();
+  // review_date defaults to now
+  connection.query(`
+    INSERT INTO Review
+      (review_id, user_id, business_id, stars, review_text, review_date)
+    VALUES
+      ('${review_id}', '${user_id}', '${business_id}', ${stars}, '${review_text}', CURRENT_TIMESTAMP)
+  `, (err) => {
+    if (err) {
+      console.error('add_review error:', err);
+      return res.status(500).json({ message: 'Internal server error' });
+    }
+    res.json({ message: 'Review submitted' });
+  });
+};
+
 module.exports = {
   average_review,
   top_local_business,
@@ -674,5 +699,6 @@ module.exports = {
   register,
   login,
   change_password,
-  getBusiness
+  getBusiness,
+  add_review
 }

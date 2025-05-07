@@ -1,6 +1,6 @@
 // src/pages/BusinessInfoPage.js
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import {
   Container,
   Typography,
@@ -13,68 +13,110 @@ import {
   TableRow,
   TableCell,
   TextField,
+  Button,
+  Rating,
 } from '@mui/material';
+
 const config = require('../config.json');
 
 export default function BusinessInfoPage() {
   const { businessId } = useParams();
-  const [business, setBusiness] = useState(null);
+  const navigate       = useNavigate();
 
   // year bounds for average_review
   const [yearLow, setYearLow]   = useState('2014');
   const [yearHigh, setYearHigh] = useState('2016');
 
-  const [metrics, setMetrics] = useState({
-    averageReview:       null,
-    checkinPerformance:  null,
-    reviewTrend:         null,
-    engagementLevel:     null,
+  const [business, setBusiness] = useState(null);
+  const [metrics, setMetrics]   = useState({
+    averageReview:      null,
+    checkinPerformance: null,
+    reviewTrend:        null,
+    engagementLevel:    null,
   });
+
+  // Review form state
+  const [rating, setRating]     = useState(0);
+  const [reviewText, setReviewText] = useState('');
+  const [submitMsg, setSubmitMsg]   = useState('');
+
+  // Decode user_id from token (or raw user_id)
+  const token = localStorage.getItem('token');
+  useEffect(() => {
+    if (!token) navigate('/login');
+  }, [token, navigate]);
+
+  let userId = null;
+  try {
+    // if JWT:
+    const payload = JSON.parse(atob(token.split('.')[1]
+      .replace(/-/g, '+').replace(/_/g, '/')));
+    userId = payload.user_id;
+  } catch {
+    // if token is raw user_id:
+    userId = token;
+  }
 
   // Fetch business details
   useEffect(() => {
     fetch(`http://${config.server_host}:${config.server_port}/business/${businessId}`)
-      .then(res => res.json())
-      .then(data => setBusiness(data))
+      .then(r => r.json())
+      .then(setBusiness)
       .catch(console.error);
   }, [businessId]);
 
-  // Fetch metrics including averageReview with dynamic year bounds
+  // Fetch metrics
   useEffect(() => {
-    const endpoints = {
-      averageReview:      `/average_review/${businessId}?year_low=${yearLow}&year_high=${yearHigh}`,
+    const eps = {
+      averageReview:      `/average_review/${businessId}`,
       checkinPerformance: `/checkin_performance/${businessId}`,
       reviewTrend:        `/review_trend/${businessId}`,
       engagementLevel:    `/engagement_level/${businessId}`,
     };
+    Object.entries(eps).forEach(([k, p]) =>
+      fetch(`http://${config.server_host}:${config.server_port}${p}`)
+        .then(r => r.json())
+        .then(data => setMetrics(prev => ({ ...prev, [k]: data })))
+        .catch(console.error)
+    );
+  }, [businessId]);
 
-    Object.entries(endpoints).forEach(([key, path]) => {
-      fetch(`http://${config.server_host}:${config.server_port}${path}`)
-        .then(res => res.json())
-        .then(data => {
-          setMetrics(prev => ({ ...prev, [key]: data }));
-        })
-        .catch(console.error);
-    });
-  }, [businessId, yearLow, yearHigh]);
+  // Submit review
+  const handleSubmitReview = () => {
+    setSubmitMsg('');
+    if (!rating || !reviewText.trim()) {
+      setSubmitMsg('Please select stars and write some text.');
+      return;
+    }
+    fetch(`http://${config.server_host}:${config.server_port}/review`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id:      userId,
+        business_id:  businessId,
+        stars:        rating,
+        review_text:  reviewText.trim(),
+      }),
+    })
+      .then(r => r.json())
+      .then(j => setSubmitMsg(j.message || 'OK'))
+      .catch(err => {
+        console.error(err);
+        setSubmitMsg('Network error');
+      });
+  };
 
   if (!business) {
-    return (
-      <Container sx={{ mt: 4 }}>
-        <Typography>Loading business info...</Typography>
-      </Container>
-    );
+    return <Container sx={{ mt: 4 }}><Typography>Loading...</Typography></Container>;
   }
 
-  // full address for map
+  // full address and map
   const fullAddress = `${business.address}, ${business.city}, ${business.state} ${business.postal_code}`;
   const mapSrc      = `https://www.google.com/maps?q=${encodeURIComponent(fullAddress)}&output=embed`;
 
   return (
     <Container sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        {business.name}
-      </Typography>
+      <Typography variant="h4">{business.name}</Typography>
       <Divider sx={{ mb: 3 }} />
 
       <Grid container spacing={4}>
@@ -195,6 +237,36 @@ export default function BusinessInfoPage() {
                 </Typography>
               </Grid>
             </Grid>
+          </Paper>
+        </Grid>
+
+        {/* Review form */}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 2 }} elevation={2}>
+            <Typography variant="h6" gutterBottom>
+              Write a Review
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <Rating
+                name="review-rating"
+                value={rating}
+                onChange={(_, v) => setRating(v)}
+              />
+              <TextField
+                label="Your review"
+                fullWidth
+                multiline
+                minRows={2}
+                value={reviewText}
+                onChange={e => setReviewText(e.target.value)}
+              />
+            </Box>
+            <Button variant="contained" onClick={handleSubmitReview}>
+              Submit
+            </Button>
+            {submitMsg && (
+              <Typography sx={{ mt: 1 }}>{submitMsg}</Typography>
+            )}
           </Paper>
         </Grid>
       </Grid>
