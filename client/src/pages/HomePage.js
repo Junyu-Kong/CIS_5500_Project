@@ -1,7 +1,6 @@
 // src/pages/HomePage.js
 import { useEffect, useState } from 'react';
-import { Container, Divider, Button, Typography } from '@mui/material';
-import { NavLink } from 'react-router-dom';
+import { Container, Divider, Typography } from '@mui/material';
 
 import LazyTable from '../components/LazyTable';
 const config = require('../config.json');
@@ -18,12 +17,9 @@ export default function HomePage() {
   }, []);
 
   const columns = [
-    {
-      field: 'name',
-      headerName: 'Business Name'
-    },
-    { field: 'city',       headerName: 'City' },
-    { field: 'avg_rating',      headerName: 'Avg Rating' },
+    { field: 'name',         headerName: 'Business Name' },
+    { field: 'city',         headerName: 'City' },
+    { field: 'avg_rating',   headerName: 'Avg Rating' },
     { field: 'review_count', headerName: 'Reviews' },
   ];
 
@@ -36,27 +32,6 @@ export default function HomePage() {
       <Typography variant="body1" gutterBottom>
         App Author: <strong>{author || '...'}</strong>
       </Typography>
-
-      <Divider sx={{ my: 3 }} />
-
-      <Button
-        component={NavLink}
-        to="/search"
-        variant="contained"
-        color="primary"
-        sx={{ mr: 2 }}
-      >
-        Search Businesses
-      </Button>
-
-      <Button
-        component={NavLink}
-        to="/login"
-        variant="outlined"
-        color="secondary"
-      >
-        Login / Register
-      </Button>
 
       <Divider sx={{ my: 3 }} />
 

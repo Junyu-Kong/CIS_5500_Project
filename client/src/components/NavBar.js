@@ -1,44 +1,60 @@
-import { AppBar, Container, Toolbar, Typography } from '@mui/material'
+// src/components/NavBar.js
+import { AppBar, Container, Toolbar, Typography, Box, Button } from '@mui/material';
 import { NavLink } from 'react-router-dom';
 
-// The hyperlinks in the NavBar contain a lot of repeated formatting code so a
-// helper component NavText local to the file is defined to prevent repeated code.
-function NavText({ href, text, isMain }) {
+// Helper for styled links
+function NavText({ href, text, isMain = false }) {
   return (
     <Typography
-      variant={isMain ? 'h5' : 'h7'}
+      variant={isMain ? 'h5' : 'subtitle1'}
       noWrap
-      style={{
-        marginRight: '30px',
+      sx={{
+        mr: 4,
         fontFamily: 'monospace',
-        fontWeight: 700,
-        letterSpacing: '.3rem',
+        fontWeight: isMain ? 700 : 500,
+        letterSpacing: '.1rem',
       }}
     >
       <NavLink
         to={href}
-        style={{
+        style={({ isActive }) => ({
           color: 'inherit',
           textDecoration: 'none',
-        }}
+          borderBottom: isActive ? '2px solid white' : 'none',
+        })}
       >
         {text}
       </NavLink>
     </Typography>
-  )
+  );
 }
 
-// Here, we define the NavBar. Note that we heavily leverage MUI components
-// to make the component look nice. Feel free to try changing the formatting
-// props to how it changes the look of the component.
 export default function NavBar() {
   return (
-    <AppBar position='static'>
-      <Container maxWidth='xl'>
+    <AppBar position="static">
+      <Container maxWidth="xl">
         <Toolbar disableGutters>
-          <NavText href='/' text='SWIFTIFY' isMain />
-          <NavText href='/albums' text='ALBUMS' />
-          <NavText href='/songs' text='SONGS' />
+          {/* left side */}
+          <Box sx={{ display: 'flex', flexGrow: 1, alignItems: 'center' }}>
+            <NavText href="/" text="YELPCLONE" isMain />
+            <NavText href="/" text="Home" />
+            <NavText href="/search" text="Search" />
+          </Box>
+
+          {/* rightmost */}
+          <Button
+            color="inherit"
+            component={NavLink}
+            to="/login"
+            sx={{
+              fontFamily: 'monospace',
+              fontWeight: 500,
+              letterSpacing: '.1rem',
+              textDecoration: 'none',
+            }}
+          >
+            Login
+          </Button>
         </Toolbar>
       </Container>
     </AppBar>
