@@ -5,5 +5,6 @@
   "rds_password": "finalprojcis5500",
   "rds_db": "yelp",
   "server_host": "localhost",
-  "server_port": "8080"
+  "server_port": "8080",
+  "jwt_secret": "lsadfahosf9s8ofihiwel_sdsjfsw[e-q3wle"
 }

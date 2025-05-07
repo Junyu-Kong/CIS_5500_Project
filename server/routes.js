@@ -1,5 +1,6 @@
 const { Pool, types } = require('pg');
 const jwt    = require('jsonwebtoken');
+const crypto = require('crypto');
 const config = require('./config.json')
 
 // Override the default parsing for BIGINT (PostgreSQL type ID 20)
@@ -18,6 +19,16 @@ const connection = new Pool({
   },
 });
 connection.connect((err) => err && console.log(err));
+
+/** Generate a URL-safe, 128-bit ID (22 chars) */
+function generateUserId() {
+  return crypto
+    .randomBytes(16)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
 
 // GET /average_review/:business_id
 const average_review = async function(req, res) {
@@ -497,22 +508,47 @@ const tipper_stats = async function(req, res) {
 const register = async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
-    return res.status(400).json({ message: 'Username and password required' });
+    return res.status(400).json({ message: 'Username & password required' });
   }
-
   try {
-    // insert into users(username, password) directly
-    await connection.query(
-      `INSERT INTO users (username, password) VALUES ($1, $2)`,
-      [username, password]
+    // 1) check login table for existing username
+    const { rowCount } = await connection.query(
+      'SELECT 1 FROM login WHERE username = $1',
+      [username]
     );
-    return res.status(201).json({ message: 'User registered' });
-  } catch (err) {
-    if (err.code === '23505') {
-      // unique_violation
+    if (rowCount > 0) {
       return res.status(409).json({ message: 'Username already taken' });
     }
-    console.error(err);
+
+    // 2) create a new unique user_id
+    let userId;
+    let exists;
+    do {
+      userId = generateUserId();
+      const chk = await connection.query(
+        'SELECT 1 FROM users WHERE user_id = $1',
+        [userId]
+      );
+      exists = chk.rowCount > 0;
+    } while (exists);
+
+    // 3) insert into users (user_id, name, yelping_since, elite default null)
+    await connection.query(
+      `INSERT INTO users (user_id, name, yelping_since)
+       VALUES ($1, $2, CURRENT_TIMESTAMP)`,
+      [userId, username]
+    );
+
+    // 4) insert into login (username PK, password, user_id FK)
+    await connection.query(
+      `INSERT INTO login (username, password, user_id)
+       VALUES ($1, $2, $3)`,
+      [username, password, userId]
+    );
+
+    return res.status(201).json({ message: 'User registered' });
+  } catch (err) {
+    console.error('Register error:', err);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
@@ -521,33 +557,29 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
-    return res.status(400).json({ message: 'Username and password required' });
+    return res.status(400).json({ message: 'Username & password required' });
   }
-
   try {
-    // look up the user’s stored password
+    // look up password + user_id
     const result = await connection.query(
-      `SELECT user_id, password FROM users WHERE username = $1`,
+      `SELECT l.password, l.user_id
+       FROM login l
+       WHERE l.username = $1`,
       [username]
     );
-    if (result.rows.length === 0) {
+    if (result.rowCount === 0 || result.rows[0].password !== password) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    const { user_id, password: stored } = result.rows[0];
-    if (password !== stored) {
-      return res.status(401).json({ message: 'Invalid credentials' });
-    }
-
-    // Sign and return a JWT (optional—you can return whatever you like)
+    // issue a JWT for front-end
     const token = jwt.sign(
-      { user_id, username },
+      { user_id: result.rows[0].user_id, username },
       config.jwt_secret,
       { expiresIn: '1h' }
     );
     return res.json({ token });
   } catch (err) {
-    console.error(err);
+    console.error('Login error:', err);
     return res.status(500).json({ message: 'Internal server error' });
   }
 };

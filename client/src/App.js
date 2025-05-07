@@ -40,10 +40,9 @@ export default function App() {
           <Route path="/leaderboard/tippers" element={<TipperStatsPage />} />
 
           {/* Authentication */}
-          {/*
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          */}
+          
 
           {/* fallback: could add a 404 page */}
         </Routes>
