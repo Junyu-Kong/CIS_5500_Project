@@ -91,13 +91,24 @@ export default function BusinessInfoPage() {
                   <TableCell>{business.categories}</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell>Hours</TableCell>
+                <TableCell>Hours</TableCell>
                   <TableCell>
-                    <Box component="pre" sx={{ whiteSpace: 'pre-wrap' }}>
-                      {JSON.stringify(business.hours, null, 2)}
-                    </Box>
+                    <Table size="small" sx={{ border: 'none' }}>
+                      <TableBody>
+                        {Object.entries(business.hours).map(([day, hrs]) => (
+                          <TableRow key={day} sx={{ border: 'none' }}>
+                            <TableCell sx={{ border: 'none', fontWeight: 500, p: 0.5 }}>
+                              {day}
+                            </TableCell>
+                            <TableCell sx={{ border: 'none', p: 0.5 }}>
+                              {hrs}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </TableCell>
-                </TableRow>
+              </TableRow>
               </TableBody>
             </Table>
           </Paper>
