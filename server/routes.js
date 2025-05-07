@@ -56,6 +56,14 @@ const average_review = async function(req, res) {
 // GET /top_local_business
 const top_local_business = async function(req, res) {
   const state = req.query.state ?? '%'
+  page = req.query.page;
+  if (!page) {
+    page = 1;
+  }
+  
+  const pageSize = req.query.page_size === undefined ? 10 : req.query.page_size;
+  const start = pageSize * (page - 1);
+
   const city = req.query.city ?? '%'
 
   connection.query(`
@@ -369,7 +377,6 @@ const top_users_by_city = async function(req, res) {
 
   connection.query(`
     WITH city_stats AS (
-      -- Qualifying cities
       SELECT
         b.city,
         COUNT(DISTINCT b.business_id)    AS open_businesses,
@@ -383,7 +390,6 @@ const top_users_by_city = async function(req, res) {
         AND AVG(r.stars) > 3.5
     ),
     user_metrics AS (
-      -- Per user+city: total reviews and total tips
       SELECT
         u.user_id,
         u.name      AS user_name,
@@ -405,7 +411,6 @@ const top_users_by_city = async function(req, res) {
       um.total_reviews,
       um.total_tips
     FROM (
-      -- Rank users within each city
       SELECT
         um.*,
         ROW_NUMBER() OVER (
@@ -430,6 +435,13 @@ const top_users_by_city = async function(req, res) {
 
 // GET /tipper_stats
 const tipper_stats = async function(req, res) {
+  const page = req.query.page;
+  if (!page) {
+    page = 1;
+  }
+  
+  const pageSize = req.query.page_size === undefined ? 10 : req.query.page_size;
+  const start = pageSize * (page - 1);
 
   connection.query(`
     WITH user_state_counts AS (
@@ -455,7 +467,7 @@ const tipper_stats = async function(req, res) {
       -- Whether the user has ever tipped
       SELECT
         user_id,
-        TRUE AS has_tipped
+        'TRUE' AS has_tipped
       FROM Tip
       GROUP BY user_id
     )
@@ -464,12 +476,13 @@ const tipper_stats = async function(req, res) {
       usc.name          AS user_name,
       usc.states_reviewed,
       urt.total_reviews,
-      COALESCE(utf.has_tipped, FALSE) AS has_ever_tipped
+      COALESCE(utf.has_tipped, 'FALSE') AS has_ever_tipped
     FROM user_state_counts usc
     JOIN user_review_totals urt USING (user_id)
     LEFT JOIN user_tip_flags utf USING (user_id)
     WHERE usc.states_reviewed >= 3
-    ORDER BY usc.states_reviewed DESC, urt.total_reviews DESC;
+    ORDER BY usc.states_reviewed DESC, urt.total_reviews DESC
+    LIMIT ${pageSize} OFFSET ${start};
   `, (err, data) => {
     if (err) {
       console.log(err);

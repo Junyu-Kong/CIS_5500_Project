@@ -10,6 +10,9 @@ import HomePage from "./pages/HomePage";
 import SearchPage from "./pages/SearchPage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
+import TopLocalBusinessesPage from "./pages/TopLocalBusinessesPage";
+import TopUsersByCityPage from './pages/TopUsersByCityPage';
+import TipperStatsPage    from './pages/TipperStatsPage';
 
 // custom MUI theme
 export const theme = createTheme({
@@ -31,6 +34,10 @@ export default function App() {
 
           {/* Search & Browse */}
           <Route path="/search" element={<SearchPage />} />
+
+          <Route path="/leaderboard/local" element={<TopLocalBusinessesPage />} />
+          <Route path="/leaderboard/users" element={<TopUsersByCityPage />} />
+          <Route path="/leaderboard/tippers" element={<TipperStatsPage />} />
 
           {/* Authentication */}
           {/*

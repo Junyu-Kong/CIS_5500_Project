@@ -39,6 +39,9 @@ export default function NavBar() {
             <NavText href="/" text="YELPCLONE" isMain />
             <NavText href="/" text="Home" />
             <NavText href="/search" text="Search" />
+            <NavText href="/leaderboard/local" text="Top Local" />
+            <NavText href="/leaderboard/users" text="Top Users" />
+            <NavText href="/leaderboard/tippers" text="Tippers" />
           </Box>
 
           {/* rightmost */}
