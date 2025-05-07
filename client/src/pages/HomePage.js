@@ -1,6 +1,7 @@
 // src/pages/HomePage.js
 import { useEffect, useState } from 'react';
 import { Container, Divider, Typography } from '@mui/material';
+import { NavLink } from 'react-router-dom';
 
 import LazyTable from '../components/LazyTable';
 const config = require('../config.json');
@@ -14,7 +15,13 @@ export default function HomePage() {
   }, []);
 
   const columns = [
-    { field: 'name',         headerName: 'Business Name' },
+    { field: 'name',         headerName: 'Business Name',
+      renderCell: (row) => (
+        <NavLink to={`/business/${row.business_id}`}>
+          {row.name}
+        </NavLink>
+      )
+     },
     { field: 'city',         headerName: 'City' },
     { field: 'avg_rating',   headerName: 'Avg Rating' },
     { field: 'review_count', headerName: 'Reviews' },

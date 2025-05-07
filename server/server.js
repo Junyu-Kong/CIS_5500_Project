@@ -25,6 +25,7 @@ app.get('/top_business',                  routes.top_business);
 app.get('/local_categorized_business',    routes.local_categorized_business);
 app.get('/top_users_by_city',             routes.top_users_by_city);
 app.get('/tipper_stats',                  routes.tipper_stats);
+app.get('/business/:business_id', routes.getBusiness);
 
 app.post('/register', routes.register);
 app.post('/login',    routes.login);
