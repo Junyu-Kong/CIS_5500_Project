@@ -1,0 +1,10 @@
+{
+  "rds_host": "finalproject.chp0epgt3evb.us-east-1.rds.amazonaws.com",
+  "rds_port": "5432",
+  "rds_user": "cis5500",
+  "rds_password": "finalprojcis5500",
+  "rds_db": "yelp",
+  "server_host": "localhost",
+  "server_port": "8080",
+  "jwt_secret": "lsadfahosf9s8ofihiwel_sdsjfsw[e-q3wle"
+}
