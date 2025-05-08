@@ -132,37 +132,48 @@ const checkin_performance = async function(req, res) {
   const bid = req.params.business_id;
 
   connection.query(`
-    WITH check_in AS (
-      SELECT
-        c.business_id     AS business_id,
-        b.name            AS business_name,
-        b.city,
-        COUNT(*)          AS total_checkins
-      FROM checkin c
-      JOIN business b
-        ON c.business_id = b.business_id
-      GROUP BY c.business_id, b.name, b.city
-    ),
-    average AS (
-      SELECT
-        AVG(ci.total_checkins) AS city_avg,
-        ci.city
-      FROM check_in ci
-      GROUP BY ci.city
+WITH same_city AS (
+    SELECT business_id, name, city
+    FROM business b1
+    WHERE EXISTS (
+        SELECT 1
+        FROM business b2
+        WHERE b2.business_id = '${bid}'
+        AND b1.city = b2.city
     )
-    SELECT
-      ci.business_id,
-      ci.business_name,
-      ci.total_checkins,
-      CASE
-        WHEN ci.total_checkins > average.city_avg THEN 'Above Average'
-        ELSE 'Below Average'
-      END AS checkin_performance
-    FROM check_in ci
-    JOIN average
-      ON ci.city = average.city
-    WHERE ci.business_id = '${bid}'
-    ORDER BY checkin_performance, total_checkins DESC;
+
+),
+check_in AS (
+  SELECT
+    c.business_id     AS business_id,
+    b.name            AS business_name,
+    b.city            AS city,
+    COUNT(*)          AS total_checkins
+  FROM checkin c
+  JOIN same_city b
+    ON c.business_id = b.business_id
+  GROUP BY c.business_id, b.name, b.city
+),
+average AS (
+  SELECT
+    AVG(ci.total_checkins) AS city_avg,
+    ci.city
+  FROM check_in ci
+  GROUP BY ci.city
+)
+SELECT
+  ci.business_id,
+  ci.business_name,
+  ci.total_checkins,
+  CASE
+    WHEN ci.total_checkins > average.city_avg THEN 'Above Average'
+    ELSE 'Below Average'
+  END AS checkin_performance
+FROM check_in ci
+JOIN average
+  ON ci.city = average.city
+WHERE ci.business_id = '${bid}'
+ORDER BY checkin_performance, total_checkins DESC;
   `, (err, data) => {
     if (err) {
       console.error(err);
@@ -177,42 +188,42 @@ const review_trend = async function(req, res) {
   const bid = req.params.business_id;
 
   connection.query(`
-    WITH rev AS (
-      SELECT
-        COUNT(*)               AS review_count,
-        t.business_id          AS business_id,
-        TO_CHAR(t.tip_date,'YYYY') AS year,
-        b.name                 AS business_name
-      FROM tip t
-      JOIN business b
-        ON t.business_id = b.business_id
-      WHERE t.business_id = '${bid}'
-      GROUP BY t.business_id, year, b.name
-    ),
-    tmp AS (
-      SELECT
-        rev.business_id,
-        rev.business_name,
-        rev.year,
-        rev.review_count,
-        rev.review_count
-          - LAG(rev.review_count, 1, rev.review_count)
-            OVER (PARTITION BY rev.business_id ORDER BY rev.year)
-          AS trend
-      FROM rev
-    )
-    SELECT
-      tmp.business_id,
-      tmp.business_name,
-      tmp.year,
-      tmp.review_count,
-      CASE
-        WHEN tmp.trend > 0 THEN 'Increasing'
-        WHEN tmp.trend < 0 THEN 'Decreasing'
-        ELSE 'Stable'
-      END AS review_trend
-    FROM tmp
-    ORDER BY tmp.business_name, tmp.year;
+WITH rev AS (
+  SELECT
+    COUNT(*)               AS review_count,
+    t.business_id          AS business_id,
+    EXTRACT(YEAR FROM t.tip_date) AS year,
+    b.name                 AS business_name
+  FROM tip t
+  JOIN business b
+    ON t.business_id = b.business_id
+  WHERE t.business_id = '${bid}'
+  GROUP BY t.business_id, year, b.name
+),
+tmp AS (
+  SELECT
+    rev.business_id,
+    rev.business_name,
+    rev.year,
+    rev.review_count,
+    rev.review_count
+      - LAG(rev.review_count, 1, rev.review_count)
+        OVER (PARTITION BY rev.business_id ORDER BY rev.year)
+      AS trend
+  FROM rev
+)
+SELECT
+  tmp.business_id,
+  tmp.business_name,
+  tmp.year::TEXT AS year,
+  tmp.review_count,
+  CASE
+    WHEN tmp.trend > 0 THEN 'Increasing'
+    WHEN tmp.trend < 0 THEN 'Decreasing'
+    ELSE 'Stable'
+  END AS review_trend
+FROM tmp
+ORDER BY tmp.business_name, tmp.year;
   `, (err, data) => {
     if (err) {
       console.error(err);
@@ -227,59 +238,71 @@ const engagement_level = async function(req, res) {
   const bid = req.params.business_id;
 
   connection.query(`
-    WITH tips AS (
-      SELECT COUNT(*)       AS tip_count,
-             business_id
-      FROM tip
-      GROUP BY business_id
-    ),
-    checkins AS (
-      SELECT COUNT(*)       AS checkin_count,
-             business_id
-      FROM checkin
-      GROUP BY business_id
-    ),
-    engagement AS (
-      SELECT
-        b.business_id,
-        b.name          AS business_name,
-        b.city,
-        COALESCE(t.tip_count, 0)     AS tip_count,
-        COALESCE(c.checkin_count, 0) AS checkin_count,
-        CASE
-          WHEN COALESCE(c.checkin_count, 0) = 0 THEN 0
-          ELSE t.tip_count::float / c.checkin_count
-        END AS tip_checkin_ratio
-      FROM business b
-      LEFT JOIN tips t
-        ON b.business_id = t.business_id
-      LEFT JOIN checkins c
-        ON b.business_id = c.business_id
-    ),
-    city_avg AS (
-      SELECT
-        AVG(e.tip_checkin_ratio)   AS city_avg_ratio,
-        e.city
-      FROM engagement e
-      GROUP BY e.city
-    )
-    SELECT
-      e.business_id,
-      e.business_name    AS name,
-      e.tip_count,
-      e.checkin_count,
-      ROUND(e.tip_checkin_ratio::numeric, 3) AS tip_checkin_ratio,
-      ROUND(city_avg.city_avg_ratio::numeric, 3) AS city_avg_ratio,
-      CASE
-        WHEN e.tip_checkin_ratio >= city_avg.city_avg_ratio * 1.1 THEN 'High Engagement'
-        WHEN e.tip_checkin_ratio <= city_avg.city_avg_ratio * 0.9 THEN 'Low Engagement'
-        ELSE 'Average Engagement'
-      END AS engagement_label
-    FROM engagement e
-    JOIN city_avg
-      ON e.city = city_avg.city
-    WHERE e.business_id = '${bid}'
-    ORDER BY e.tip_checkin_ratio DESC;
+WITH city AS (
+    SELECT city
+    FROM business
+    WHERE business_id = '${bid}'
+),
+same_city AS (
+    SELECT business_id, name, city
+    FROM business
+    WHERE city IN (SELECT * FROM city)
+),
+tips AS (
+  SELECT COUNT(*)       AS tip_count,
+         business_id
+  FROM tip
+  WHERE business_id IN (SELECT business_id FROM same_city)
+  GROUP BY business_id
+),
+checkins AS (
+  SELECT COUNT(*)       AS checkin_count,
+         business_id
+  FROM checkin
+  WHERE business_id IN (SELECT business_id FROM same_city)
+  GROUP BY business_id
+),
+engagement AS (
+  SELECT
+    b.business_id,
+    b.name          AS business_name,
+    b.city,
+    COALESCE(t.tip_count, 0)     AS tip_count,
+    COALESCE(c.checkin_count, 0) AS checkin_count,
+    CASE
+      WHEN COALESCE(c.checkin_count, 0) = 0 THEN 0
+      ELSE t.tip_count::float / c.checkin_count
+    END AS tip_checkin_ratio
+  FROM same_city b
+  LEFT JOIN tips t
+    ON b.business_id = t.business_id
+  LEFT JOIN checkins c
+    ON b.business_id = c.business_id
+),
+city_avg AS (
+  SELECT
+    AVG(e.tip_checkin_ratio)   AS city_avg_ratio,
+    e.city
+  FROM engagement e
+  GROUP BY e.city
+)
+SELECT
+  e.business_id,
+  e.business_name    AS name,
+  e.tip_count,
+  e.checkin_count,
+  ROUND(e.tip_checkin_ratio::numeric, 3) AS tip_checkin_ratio,
+  ROUND(city_avg.city_avg_ratio::numeric, 3) AS city_avg_ratio,
+  CASE
+    WHEN e.tip_checkin_ratio >= city_avg.city_avg_ratio * 1.1 THEN 'High Engagement'
+    WHEN e.tip_checkin_ratio <= city_avg.city_avg_ratio * 0.9 THEN 'Low Engagement'
+    ELSE 'Average Engagement'
+  END AS engagement_label
+FROM engagement e
+JOIN city_avg
+  ON e.city = city_avg.city
+WHERE e.business_id = '${bid}'
+ORDER BY e.tip_checkin_ratio DESC;
   `, (err, data) => {
     if (err) {
       console.error('engagement_level error:', err);
