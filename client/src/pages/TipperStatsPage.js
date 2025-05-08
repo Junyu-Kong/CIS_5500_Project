@@ -21,7 +21,7 @@ export default function TipperStatsPage() {
   return (
     <Container sx={{ mt: 4 }}>
       <Typography variant="h4" gutterBottom>
-        Tipper Stats
+        Reviewer Stats
       </Typography>
       <Divider sx={{ mb: 2 }} />
       <LazyTable

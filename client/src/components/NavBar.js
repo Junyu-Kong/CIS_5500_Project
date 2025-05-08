@@ -50,7 +50,7 @@ export default function NavBar() {
             <NavText href="/search" text="Search" />
             <NavText href="/leaderboard/local" text="Top Local" />
             <NavText href="/leaderboard/users" text="Top Users" />
-            <NavText href="/leaderboard/tippers" text="Tippers" />
+            <NavText href="/leaderboard/tippers" text="Cross State Reviewers" />
           </Box>
 
           {/* rightmost */}
