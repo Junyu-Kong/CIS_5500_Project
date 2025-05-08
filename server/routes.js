@@ -685,6 +685,33 @@ const add_review = async function(req, res) {
   });
 };
 
+// GET /business/:business_id/reviews
+const recent_reviews = async function(req, res) {
+  const bid = req.params.business_id;
+
+  connection.query(`
+    SELECT
+      r.review_id,
+      r.user_id,
+      u.name        AS user_name,
+      r.stars,
+      r.review_text,
+      TO_CHAR(r.review_date, 'YYYY-MM-DD HH24:MI:SS') AS review_date
+    FROM Review r
+    JOIN Users u
+      ON r.user_id = u.user_id
+    WHERE r.business_id = '${bid}'
+    ORDER BY r.review_date DESC
+    LIMIT 3;
+  `, (err, data) => {
+    if (err) {
+      console.error('recent_reviews error:', err);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+    res.json(data.rows);
+  });
+};
+
 module.exports = {
   average_review,
   top_local_business,
@@ -700,5 +727,6 @@ module.exports = {
   login,
   change_password,
   getBusiness,
-  add_review
+  add_review,
+  recent_reviews
 }

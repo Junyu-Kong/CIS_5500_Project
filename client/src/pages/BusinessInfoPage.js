@@ -9,6 +9,7 @@ import {
   Divider,
   Grid,
   Table,
+  TableHead,
   TableBody,
   TableRow,
   TableCell,
@@ -36,26 +37,27 @@ export default function BusinessInfoPage() {
   });
 
   // Review form state
-  const [rating, setRating]     = useState(0);
+  const [rating, setRating]         = useState(0);
   const [reviewText, setReviewText] = useState('');
   const [submitMsg, setSubmitMsg]   = useState('');
 
-  // Decode user_id from token (or raw user_id)
+  // Recent reviews state
+  const [recentReviews, setRecentReviews] = useState([]);
+
+  // Require login
   const token = localStorage.getItem('token');
   useEffect(() => {
     if (!token) navigate('/login');
   }, [token, navigate]);
 
-  let userId = null;
+  // Decode user_id from token or raw
+  let userId = token;
   try {
-    // if JWT:
-    const payload = JSON.parse(atob(token.split('.')[1]
-      .replace(/-/g, '+').replace(/_/g, '/')));
+    const payload = JSON.parse(
+      atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))
+    );
     userId = payload.user_id;
-  } catch {
-    // if token is raw user_id:
-    userId = token;
-  }
+  } catch {}
 
   // Fetch business details
   useEffect(() => {
@@ -68,7 +70,7 @@ export default function BusinessInfoPage() {
   // Fetch metrics
   useEffect(() => {
     const eps = {
-      averageReview:      `/average_review/${businessId}`,
+      averageReview:      `/average_review/${businessId}?year_low=${yearLow}&year_high=${yearHigh}`,
       checkinPerformance: `/checkin_performance/${businessId}`,
       reviewTrend:        `/review_trend/${businessId}`,
       engagementLevel:    `/engagement_level/${businessId}`,
@@ -79,7 +81,15 @@ export default function BusinessInfoPage() {
         .then(data => setMetrics(prev => ({ ...prev, [k]: data })))
         .catch(console.error)
     );
-  }, [businessId]);
+  }, [businessId, yearLow, yearHigh]);
+
+  // Fetch recent reviews (re-run after submit)
+  useEffect(() => {
+    fetch(`http://${config.server_host}:${config.server_port}/business/${businessId}/reviews`)
+      .then(r => r.json())
+      .then(setRecentReviews)
+      .catch(console.error);
+  }, [businessId, submitMsg]);
 
   // Submit review
   const handleSubmitReview = () => {
@@ -92,14 +102,14 @@ export default function BusinessInfoPage() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        user_id:      userId,
-        business_id:  businessId,
-        stars:        rating,
-        review_text:  reviewText.trim(),
+        user_id:     userId,
+        business_id: businessId,
+        stars:       rating,
+        review_text: reviewText.trim(),
       }),
     })
       .then(r => r.json())
-      .then(j => setSubmitMsg(j.message || 'OK'))
+      .then(j => setSubmitMsg(j.message || 'Review submitted'))
       .catch(err => {
         console.error(err);
         setSubmitMsg('Network error');
@@ -107,16 +117,21 @@ export default function BusinessInfoPage() {
   };
 
   if (!business) {
-    return <Container sx={{ mt: 4 }}><Typography>Loading...</Typography></Container>;
+    return (
+      <Container sx={{ mt: 4 }}>
+        <Typography>Loading business info...</Typography>
+      </Container>
+    );
   }
 
-  // full address and map
   const fullAddress = `${business.address}, ${business.city}, ${business.state} ${business.postal_code}`;
   const mapSrc      = `https://www.google.com/maps?q=${encodeURIComponent(fullAddress)}&output=embed`;
 
   return (
     <Container sx={{ mt: 4 }}>
-      <Typography variant="h4">{business.name}</Typography>
+      <Typography variant="h4" gutterBottom>
+        {business.name}
+      </Typography>
       <Divider sx={{ mb: 3 }} />
 
       <Grid container spacing={4}>
@@ -186,14 +201,12 @@ export default function BusinessInfoPage() {
           </Box>
         </Grid>
 
-        {/* Metrics */}
+        {/* Performance Metrics */}
         <Grid item xs={12}>
           <Paper sx={{ p: 2 }} elevation={2}>
             <Typography variant="h6" gutterBottom>
               Performance Metrics
             </Typography>
-
-            {/* Year bounds selectors */}
             <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
               <TextField
                 label="Year Low"
@@ -210,7 +223,6 @@ export default function BusinessInfoPage() {
                 sx={{ width: 120 }}
               />
             </Box>
-
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6} md={3}>
                 <Typography variant="subtitle1">Avg Reviews (3-mo rolling)</Typography>
@@ -240,7 +252,7 @@ export default function BusinessInfoPage() {
           </Paper>
         </Grid>
 
-        {/* Review form */}
+        {/* Review Form */}
         <Grid item xs={12}>
           <Paper sx={{ p: 2 }} elevation={2}>
             <Typography variant="h6" gutterBottom>
@@ -267,6 +279,44 @@ export default function BusinessInfoPage() {
             {submitMsg && (
               <Typography sx={{ mt: 1 }}>{submitMsg}</Typography>
             )}
+          </Paper>
+        </Grid>
+
+        {/* Recent Reviews */}
+        <Grid item xs={12}>
+          <Paper sx={{ p: 2, mt: 2 }} elevation={2}>
+            <Typography variant="h6" gutterBottom>
+              Recent Reviews
+            </Typography>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>User</TableCell>
+                  <TableCell>Stars</TableCell>
+                  <TableCell>Review</TableCell>
+                  <TableCell>Date</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {recentReviews.map(r => (
+                  <TableRow key={r.review_id}>
+                    <TableCell>{r.user_name}</TableCell>
+                    <TableCell>
+                      <Rating value={r.stars} readOnly size="small" />
+                    </TableCell>
+                    <TableCell>{r.review_text}</TableCell>
+                    <TableCell>{r.review_date}</TableCell>
+                  </TableRow>
+                ))}
+                {!recentReviews.length && (
+                  <TableRow>
+                    <TableCell colSpan={4} align="center">
+                      No reviews yet
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </Paper>
         </Grid>
       </Grid>
