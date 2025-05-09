@@ -503,18 +503,7 @@ const tipper_stats = async function(req, res) {
   const start = pageSize * (page - 1);
 
   connection.query(`
-    WITH user_state_counts AS (
-      -- Count how many distinct states each user has reviewed in
-      SELECT
-        u.user_id,
-        u.name,
-        COUNT(DISTINCT b.state) AS states_reviewed
-      FROM Users u
-      JOIN Review r    ON u.user_id = r.user_id
-      JOIN Business b  ON r.business_id = b.business_id
-      GROUP BY u.user_id, u.name
-    ),
-    user_review_totals AS (
+    WITH user_review_totals AS (
       -- Total reviews per user
       SELECT
         user_id,
