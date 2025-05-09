@@ -8,3 +8,12 @@ Beyond the core Yelp functionality—business information page for individual bu
 
 The underlying problem we address is that many people lack easy access to deeper, data-driven insights when choosing a place to dine or visit. By layering time-series analysis and gamification elements on top of traditional review browsing, our platform not only provides richer decision-making tools but also fosters greater community engagement than existing services. 
 
+## Usage
+1.  Clone the repository
+2.  `cd server`
+3.  `npm install`
+4.  `npm start`
+5.  Create a different terminal
+6.  `cd client`
+7.  `npm install`
+8.  `npm start`
